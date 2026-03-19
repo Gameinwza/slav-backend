@@ -10,13 +10,13 @@ const { isValidMove } = require("../game/rules");
 function emitGameState(io, roomId, room) {
   if (!room.players || room.players.length === 0) return;
   const base = {
-    table:        room.table,
-    turn:         room.players[room.turn],
-    turnName:     room.nicknames?.[room.players[room.turn]] || "",
-    firstTurn:    room.firstTurn  || false,
-    direction:    room.direction  || 1,
-    passCount:    room.passCount  || 0,
-    timeoutMs:    TURN_TIMEOUT_MS,
+    table: room.table,
+    turn: room.players[room.turn],
+    turnName: room.nicknames?.[room.players[room.turn]] || "",
+    firstTurn: room.firstTurn || false,
+    direction: room.direction || 1,
+    passCount: room.passCount || 0,
+    timeoutMs: TURN_TIMEOUT_MS,
     currentRanks: room.finished.map((id, i) => ({
       id, name: room.nicknames?.[id] || id, pos: i + 1
     }))
@@ -175,9 +175,9 @@ function socketHandler(io) {
       });
 
       room.table.push(cards);
-      room.passCount     = 0;
+      room.passCount = 0;
       room.passedPlayers = new Set();
-      room.lastPlayerId  = socket.id;
+      room.lastPlayerId = socket.id;
 
       io.to(socket.id).emit("yourHand", room.hands[socket.id]);
 
@@ -214,6 +214,18 @@ function socketHandler(io) {
       if (room.firstTurn) return;
 
       doPassTurn(io, room, roomId, socket.id);
+    });
+
+    socket.on("leaveRoom", (roomId) => {
+      const room = getRoom(roomId);
+      if (!room) return;
+
+      removePlayer(roomId, socket.id);
+      socket.leave(roomId);
+      socket.currentRoom = null;
+
+      const playerList = room.players.map(id => ({ id, name: room.nicknames?.[id] || id }));
+      io.to(roomId).emit("players", playerList);
     });
 
     socket.on("disconnect", () => {
